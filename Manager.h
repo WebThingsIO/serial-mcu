@@ -9,6 +9,7 @@
 #if !defined(Manager_h)
 #define Manager_h
 
+#include <stdio.h>
 #include <ArduinoJson.h>
 
 #include "Adapter.h"
@@ -17,16 +18,30 @@
 #include "Packet.h"
 #include "StaticArray.h"
 
+class ManagerBase {
+public:
+  ManagerBase(Adapter &adapter)
+    : mAdapter(adapter) {
+
+    // Save back references to the Thing and ManagerBase
+    mAdapter.SetManager(this);
+  }
+  virtual void OnPropertyChanged(const Property &property, const JsonVariant &val) = 0;
+
+protected:
+  Adapter &mAdapter;
+};
+
 template <size_t JSON_BUFFER_SIZE>
-class Manager {
+class Manager : public ManagerBase {
 public:
   Manager(CommPort &port,
           Buffer &rxPacketBuffer, Buffer &txPacketBuffer,
-          const Adapter *adapters, size_t numAdapters)
-    : mPort(port),
+          Adapter &adapter)
+    : ManagerBase(adapter),
+      mPort(port),
       mRxPacket(rxPacketBuffer),
-      mTxPacket(txPacketBuffer),
-      mAdapters(adapters, numAdapters) {
+      mTxPacket(txPacketBuffer) {
 
     mRxPacket.ShowBytes(false);
     mTxPacket.ShowBytes(false);
@@ -42,26 +57,39 @@ public:
 
     const char *cmd = jsonPacket["messageType"];
     if (cmd == NULL) {
-      printf("No messageType\n");
+      SendError("No messageType");
       return;
     }
     JsonObject &data = jsonPacket["data"];
     if (!data.success()) {
-      printf("No data\n");
+      SendError("No data");
       return;
     }
-    if (strcmp(cmd, "getAdapterCount") == 0) {
-      SendAdapterCount();
-    } else if (strcmp(cmd, "getAdapter") == 0) {
-      size_t adapterIdx = jsonPacket["data"]["adapterIdx"];
-      SendAdapter(adapterIdx);
+    if (strcmp(cmd, "getAdapter") == 0) {
+      SendAdapter();
+    } else if (strcmp(cmd, "getThingByIdx") == 0) {
+      SendThing(data["thingIdx"]);
+    } else if (strcmp(cmd, "getPropertyByIdx") == 0) {
+      SendProperty(data["thingIdx"], data["propertyIdx"]);
+    } else if (strcmp(cmd, "setProperty") == 0) {
+      SetProperty(data["id"], data["name"], data["value"]);
     } else {
-      printf("Unrecognized command: %s\n", cmd);
-      return;
+      SendError("Unrecognized command");
     }
+  }
 
-    printf("Writing it back\n");
-    mTxPacket.Write(mPort, printBuf, strlen(printBuf));
+  virtual void OnPropertyChanged(const Property &property, const JsonVariant &val) {
+    printf("OnPropertyChanged: name = %s\n", property.Name());
+    JsonObject &data = mJsonBuffer.createObject();
+    const Thing *thing = property.GetThing();
+    if (thing) {
+      data["id"] = thing->Id();
+      data["name"] = property.Name();
+      data["value"] = val;
+      SendMessage("propertyChanged", data);
+    } else {
+      SendError("propertyChanged unable to determine thing");
+    }
   }
 
   // The basic design is that the host will only ever send commands which
@@ -116,26 +144,77 @@ public:
     //XXXX need to add code to drain buffer if it isn't empty
 
     size_t len = msg.printTo((char *)mTxPacket.WriteBytes(), mTxPacket.WriteSize());
+    printf("Sending '%s'\n", mTxPacket.WriteBytes());
     mTxPacket.FillHeaderAndTrailer(len);
 
     mPort.Write(mTxPacket.Bytes(), mTxPacket.Length());
   }
 
-  void SendAdapterCount() {
-    JsonObject &data = mJsonBuffer.createObject();
-    data["adapterCount"] = mAdapters.size();
-    SendMessage("adapterCount", data);
+  void SendAdapter() {
+    SendMessage("adapter", mAdapter.JsonDescription(mJsonBuffer));
   }
 
-  void SendAdapter(size_t adapterIdx) {
+  void SendError(const char *msg) {
+    JsonObject &data = mJsonBuffer.createObject();
+    data["msg"] = msg;
+    SendMessage("error", data);
+  }
 
+  void SendThing(size_t thingIdx) {
+    const Thing *thing = mAdapter.GetThing(thingIdx);
+    if (!thing) {
+      SendError("thing not found");
+      return;
+    }
+    SendMessage("thing", thing->JsonDescription(mJsonBuffer));
+  }
+
+  void SendProperty(size_t thingIdx, size_t propertyIdx) {
+    const Thing *thing = mAdapter.GetThing(thingIdx);
+    if (!thing) {
+      SendError("thing not found");
+      return;
+    }
+    const Property *property = thing->GetProperty(propertyIdx);
+    if (!property) {
+      SendError("property not found");
+      return;
+    }
+    SendMessage("property", property->JsonDescription(mJsonBuffer));
+  }
+
+  void SetProperty(const char *id,
+                   const char *name,
+                   const JsonVariant &value) {
+    if (!id) {
+      SendError("No id provided");
+      return;
+    }
+    if (!name) {
+      SendError("No name provided");
+      return;
+    }
+    if (!value.success()) {
+      SendError("No value provided");
+      return;
+    }
+    const Thing *thing = mAdapter.GetThing(id);
+    if (!thing) {
+      SendError("thing not found");
+      return;
+    }
+    const Property *property = thing->GetProperty(name);
+    if (!property) {
+      SendError("property not found");
+      return;
+    }
+    property->Set(value);
   }
 
 private:
   CommPort &mPort;
   Packet mRxPacket;
   Packet mTxPacket;
-  StaticArray<Adapter> mAdapters;
   StaticJsonBuffer<JSON_BUFFER_SIZE> mJsonBuffer;
 };
 

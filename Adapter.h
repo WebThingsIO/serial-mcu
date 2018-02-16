@@ -17,18 +17,30 @@
 class Adapter {
 public:
   Adapter(const char *id, const char *name,
-          const Thing *things, size_t numThings)
+          Thing *things, size_t numThings)
     : mId(id),
       mName(name),
       mThings(things, numThings) {}
 
-      const char *Id() const {
-        return mId;
-      }
+  const char *Id() const {
+    return mId;
+  }
 
-      const char *Name() const {
-        return mName;
-      }
+  const char *Name() const {
+    return mName;
+  }
+
+  const Thing *GetThing(size_t thingIdx) const;
+  const Thing *GetThing(const char *id) const;
+
+  size_t ThingCount() const {
+    return mThings.size();
+  }
+
+  JsonObject &JsonDescription(JsonBuffer &jsonBuffer) const;
+
+  void SetManager(ManagerBase *managerBase);
+
 private:
   const char *mId;
   const char *mName;

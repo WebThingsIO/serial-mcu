@@ -124,6 +124,8 @@ bool Packet::FillHeaderAndTrailer(size_t len) {
   if (len + OverheadSize > mBuffer.MaxCapacity()) {
     return false;
   }
+  mBuffer.SetCapacity(OverheadSize + len);
+  mBuffer.SetLength(OverheadSize + len);
 
   uint8_t *header = mBuffer.Bytes();
 
@@ -137,24 +139,5 @@ bool Packet::FillHeaderAndTrailer(size_t len) {
   trailer[1] = LRC(&header[HeaderSize], len);
   trailer[2] = EOT;
 
-  mBuffer.SetLength(OverheadSize + len);
   return true;
-}
-
-
-void Packet::Write(CommPort &port, const void *data, size_t len) {
-  uint8_t header[4];
-  header[0] = SOH;
-  header[1] = len & 0xff;
-  header[2] = (len >> 8) & 0xff;
-  header[3] = STX;
-
-  uint8_t trailer[3];
-  trailer[0] = ETX;
-  trailer[1] = LRC(data, len);
-  trailer[2] = EOT;
-
-  port.Write(header, sizeof(header));
-  port.Write(data, len);
-  port.Write(trailer, sizeof(trailer));
 }

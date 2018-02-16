@@ -47,7 +47,9 @@ int main(int argc, char **argv)
     size_t bufLen = strlen(buf);
 
     printf("Sending: '%s'\n", buf);
-    packet.Write(server, buf, bufLen);
+    memcpy(packet.WriteBytes(), buf, bufLen);
+    packet.FillHeaderAndTrailer(bufLen);
+    server.Write(packet.Bytes(), packet.Length());
 
     // A bit of a hack, but we just add a delay here to allow the
     // echo'd response to come in.

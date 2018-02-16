@@ -11,12 +11,17 @@
 
 #include <ArduinoJson.h>
 
+class ManagerBase;
+class Thing;
+
 class Property {
 public:
   Property(const char *name,
            JsonVariant (*getter)(const Property &),
            void (*setter)(const Property &, const JsonVariant &))
-    : mName(name),
+    : mManagerBase(NULL),
+      mThing(NULL),
+      mName(name),
       mGetter(getter),
       mSetter(setter) {}
 
@@ -24,23 +29,23 @@ public:
     return mName;
   }
 
-  virtual JsonObject &Description(JsonBuffer &jsonBuffer) const = 0;
-
-  void Set(const JsonVariant &val) const {
-    if (mSetter) {
-      mSetter(*this, val);
-    }
+  const Thing *GetThing() const {
+    return mThing;
   }
 
-  JsonVariant Get() const {
-    if (mGetter) {
-      return mGetter(*this);
-    }
-    JsonVariant unknown;
-    return unknown;
-  }
+  virtual const char *Type() const = 0;
+
+  virtual JsonObject &JsonDescription(JsonBuffer &jsonBuffer) const = 0;
+
+  void Set(const JsonVariant &val) const;
+  JsonVariant Get() const;
+
+  void SetManager(Thing *thing, ManagerBase *managerBase);
 
 private:
+  friend class ManagerBase;
+  ManagerBase *mManagerBase;
+  const Thing *mThing;
   const char *mName;
   JsonVariant (*mGetter)(const Property &property);
   void (*mSetter)(const Property &property, const JsonVariant &);
@@ -53,11 +58,9 @@ public:
            void (*setter)(const Property &, const JsonVariant &))
     : Property(name, getter, setter) {}
 
-  virtual JsonObject &Description(JsonBuffer &jsonBuffer) const {
-    JsonObject &descr = jsonBuffer.createObject();
-    descr["type"] = "boolean";
-    return descr;
-  }
+  virtual JsonObject &JsonDescription(JsonBuffer &jsonBuffer) const;
+
+  virtual const char *Type() const;
 
   bool Get() const {
     return Property::Get().as<bool>();

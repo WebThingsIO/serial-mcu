@@ -11,7 +11,6 @@
 
 #include <stdint.h>
 #include "Buffer.h"
-#include "CommPort.h"
 
 class Packet {
 public:
@@ -56,8 +55,6 @@ public:
   }
 
   bool FillHeaderAndTrailer(size_t len);
-
-  void Write(CommPort &port, const void *data, size_t len);
 
 private:
   enum State {

@@ -16,7 +16,7 @@ struct StaticArray
 {
   typedef size_t  size_type;
 
-  StaticArray(const T *elems, size_type numElems)
+  StaticArray(T *elems, size_type numElems)
     : mElem(elems),
       mNumElems(numElems) {}
 
@@ -27,8 +27,12 @@ struct StaticArray
   const T& operator[](size_type index) const {
     return mElem[index];
   }
+
+  T& operator[](size_type index) {
+    return mElem[index];
+  }
 private:
-  const T *mElem;
+  T *mElem;
   size_type mNumElems;
 };
 

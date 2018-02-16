@@ -54,6 +54,9 @@ COMMON_OBJ = $(addprefix $(BUILD)/,\
   ServerSocketPort.o \
 	Packet.o \
 	SocketPort.o \
+	Property.o \
+	Thing.o \
+	Adapter.o \
 	)
 
 TARGETS = example json-test echo-server echo-client

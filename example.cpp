@@ -19,9 +19,6 @@
 #include "Thing.h"
 
 //---------------------------------------------------------------------
-// Everything below here is the stuff that the user would write. The
-// stuff abover here will be extracted into a library
-//---------------------------------------------------------------------
 
 bool ledValue = false;
 
@@ -36,19 +33,23 @@ void ledSetter(const Property &property, const JsonVariant &val) {
   printf("ledSetter setting %s to %s\n", property.Name(), ledValue ? "on" : "off");
 }
 
-const BooleanProperty on("on", ledGetter, ledSetter);
+BooleanProperty on("on", ledGetter, ledSetter);
 
-Thing ledThing("led",
-          "onOffSwitch",
-          "Arduino LED",
-          &on, 1);
+#define ADAPTER_ID  "ArduinoLED"
 
-// The adapter ID should be unique, You can create one using
-// https://www.uuidgenerator.net/version1
+Thing ledThing(ADAPTER_ID "-led-1", // id
+               "led",               // name
+               "onOffSwitch",       // type
+               "Arduino LED",       // Description
+               &on, 1);
 
-Adapter ledAdapter("468241c6-103f-11e8-b642-0ed5f89f718b",
-  "Arduino-LED",
-  &ledThing, 1);
+// The adapter ID should be unique. The thing-id's are created by
+// appending the adapter-id with the thing-id, and the UI persists
+// these in the database.
+
+Adapter ledAdapter(ADAPTER_ID,
+                   "Arduino-LED",
+                    &ledThing, 1);
 
 ServerSocketPort port;
 StaticBuffer<256> rxPacketBuffer;
@@ -56,23 +57,9 @@ StaticBuffer<256> txPacketBuffer;
 
 Manager<512> manager(port,
                      rxPacketBuffer, txPacketBuffer,
-                     &ledAdapter, 1);
+                     ledAdapter);
 
 int main(int argc, char **argv) {
-
-#if 0
-  on.Set(true);
-  printf("Value is %s\n", on.Get() ? "on" : "off");
-  on.Set(false);
-  printf("Value is %s\n", on.Get() ? "on" : "off");
-
-  JsonObject &ledDescr = ledThing.Description(jsonBuffer);
-  char printBuf[512];
-  ledDescr.prettyPrintTo(printBuf, sizeof(printBuf));
-  printf("%s\n", printBuf);
-  ledDescr.printTo(printBuf, sizeof(printBuf));
-  printf("%s\n", printBuf);
-#endif
 
   while (true) {
     if (!port.Connect()) {

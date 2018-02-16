@@ -16,27 +16,44 @@
 
 class Thing {
 public:
-  Thing(const char *name, const char *type, const char *description,
-        const Property *properties, size_t numProperties)
-    : mName(name),
+  Thing(const char *id, const char *name,
+        const char *type, const char *description,
+        Property *properties, size_t numProperties)
+    : mId(id),
+      mName(name),
       mType(type),
       mDescription(description),
       mProperties(properties, numProperties) {}
 
-  JsonObject &Description(JsonBuffer &jsonBuffer) const {
-    JsonObject &root = jsonBuffer.createObject();
-    root["name"] = mName;
-    root["type"] = mType;
-    root["description"] = mDescription;
-    JsonObject &properties = root.createNestedObject("properties");
-    for (size_t i = 0; i < mProperties.size(); ++i) {
-      const Property &property = mProperties[i];
-      properties[property.Name()] = property.Description(jsonBuffer);
-    }
-    return root;
+  const char *Id() const {
+    return mId;
   }
 
+  const char *Name() const {
+    return mName;
+  }
+
+  const char *Type() const {
+    return mType;
+  }
+
+  const char *Description() const {
+    return mDescription;
+  }
+
+  const Property *GetProperty(size_t propertyIdx) const;
+  const Property *GetProperty(const char *name) const;
+
+  const size_t PropertyCount() const {
+    return mProperties.size();
+  }
+
+  JsonObject &JsonDescription(JsonBuffer &jsonBuffer) const;
+
+  void SetManager(ManagerBase *managerBase);
+
 private:
+  const char *mId;
   const char *mName;
   const char *mType;
   const char *mDescription;
