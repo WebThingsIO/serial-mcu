@@ -11,6 +11,7 @@
 #include <ArduinoJson.h>
 
 #include "ClientSocketPort.h"
+#include "Log.h"
 #include "Packet.h"
 #include "StaticBuffer.h"
 
@@ -46,7 +47,7 @@ int main(int argc, char **argv)
     const char *buf = TEST[test];
     size_t bufLen = strlen(buf);
 
-    printf("Sending: '%s'\n", buf);
+    LOG("Sending: '%s'\n", buf);
     memcpy(packet.WriteBytes(), buf, bufLen);
     packet.FillHeaderAndTrailer(bufLen);
     server.Write(packet.Bytes(), packet.Length());
@@ -59,20 +60,20 @@ int main(int argc, char **argv)
       int byte = server.ReadByte();
       if (byte >= 0) {
         if (packet.ProcessByte(byte)) {
-          printf("Got packet: '%s'\n", rxBuffer.Bytes());
+          LOG("Got packet: '%s'\n", rxBuffer.Bytes());
           JsonObject &root = jsonBuffer.parseObject(rxBuffer.Bytes());
           if (!root.success()) {
-            printf("Doesn't look like a JSON packet\n");
+            LOG("Doesn't look like a JSON packet\n");
             break;
           }
-          printf("Looks like a JSON packet\n");
+          LOG("Looks like a JSON packet\n");
           for (JsonObject::iterator kv = root.begin(); kv != root.end(); ++kv) {
-            printf("  Got: %s : %s\n", kv->key, kv->value.as<char *>());
+            LOG("  Got: %s : %s\n", kv->key, kv->value.as<char *>());
           }
           break;
         }
       } else {
-        printf("No more bytes available\n");
+        LOG("No more bytes available\n");
         break;
       }
     }

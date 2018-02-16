@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stddef.h>
 
+#include "Log.h"
+
 template<class T>
 struct StaticArray
 {
@@ -29,7 +31,7 @@ STATIC_ARRAY(int, arr, elems);
 
 int main(int argc, char **argv) {
   for (size_t i = 0; i < arr.size(); i++) {
-    printf("arr[%zu] = %d\n", i, arr[i]);
+    LOG("arr[%zu] = %d\n", i, arr[i]);
   }
   return 0;
 }

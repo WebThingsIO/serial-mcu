@@ -34,9 +34,10 @@ SIZE = $(CROSS_COMPILE)size
 BUILD = build
 
 INC =  -I.
+INC += -Isrc
 INC += -I../ArduinoJson
 
-CXXFLAGS = $(INC) -Wall $(COPT)
+CXXFLAGS = $(INC) -Wall $(COPT) -DUSE_LOG
 LDFLAGS =
 
 #Debugging/Optimization
@@ -78,6 +79,7 @@ $(Q)$(CXX) $(CXXFLAGS) -c -MD -o $@ $<
   rm -f $(@:.o=.d)
 endef
 
+vpath %.cpp src
 $(BUILD)/%.o: %.cpp | $(BUILD)
 	$(call compile_cxx)
 

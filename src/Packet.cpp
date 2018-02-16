@@ -7,8 +7,11 @@
  */
 
 #include "Packet.h"
+
 #include <stdio.h>
 #include <stddef.h>
+
+#include "Log.h"
 
 // Packet layout:
 //
@@ -43,10 +46,12 @@ Packet::Packet(Buffer &buffer)
 Packet::~Packet() {}
 
 bool Packet::ProcessByte(uint8_t byte) {
+  #if USE_LOG
   if (mShowBytes) {
     char ch = (byte >= ' ' && byte <= '~') ? byte : '.';
-    printf("State: %7s Rcvd 0x%02x '%c'\n", mStateStr[mState], byte, ch);
+    LOG("State: %7s Rcvd 0x%02x '%c'\n", mStateStr[mState], byte, ch);
   }
+  #endif
 
   switch (mState) {
     case STATE_SOH:
@@ -101,7 +106,7 @@ bool Packet::ProcessByte(uint8_t byte) {
       if (byte == lrc) {
         mState = STATE_EOT;
       } else {
-        printf("Got LRC: 0x%02x, expected: 0x%02x\n", byte, lrc);
+        LOG("Got LRC: 0x%02x, expected: 0x%02x\n", byte, lrc);
         mState = STATE_SOH;
       }
       break;

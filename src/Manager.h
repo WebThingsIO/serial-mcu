@@ -9,12 +9,12 @@
 #if !defined(Manager_h)
 #define Manager_h
 
-#include <stdio.h>
 #include <ArduinoJson.h>
 
 #include "Adapter.h"
 #include "Buffer.h"
 #include "CommPort.h"
+#include "Log.h"
 #include "Packet.h"
 #include "StaticArray.h"
 
@@ -48,11 +48,11 @@ public:
   }
 
   void OnPacket(JsonObject &jsonPacket) {
-    #if 1
-    printf("Got a JSON packet\n");
+    #if 0
+    LOG("Got a JSON packet\n");
     char printBuf[512];
     jsonPacket.prettyPrintTo(printBuf, sizeof(printBuf));
-    printf("%s\n", printBuf);
+    LOG("%s\n", printBuf);
     #endif
 
     const char *cmd = jsonPacket["messageType"];
@@ -79,7 +79,7 @@ public:
   }
 
   virtual void OnPropertyChanged(const Property &property, const JsonVariant &val) {
-    printf("OnPropertyChanged: name = %s\n", property.Name());
+    LOG("OnPropertyChanged: name = %s\n", property.Name());
     JsonObject &data = mJsonBuffer.createObject();
     const Thing *thing = property.GetThing();
     if (thing) {
@@ -120,7 +120,7 @@ public:
       return true;
     }
     // We received a packet.
-    //printf("Got a packet: '%s'\n", mRxPacket.Bytes());
+    //LOG("Got a packet: '%s'\n", mRxPacket.Bytes());
 
     // The call to clear will cause dangling pointers for objects
     // pointing into the buffer, but they should have all been
@@ -128,7 +128,7 @@ public:
     mJsonBuffer.clear();
     JsonObject &jsonPacket = mJsonBuffer.parseObject(mRxPacket.Bytes());
     if (!jsonPacket.success()) {
-      printf("Got a bad JSON packet\n");
+      LOG("Got a bad JSON packet\n");
       return true;
     }
 
@@ -144,7 +144,7 @@ public:
     //XXXX need to add code to drain buffer if it isn't empty
 
     size_t len = msg.printTo((char *)mTxPacket.WriteBytes(), mTxPacket.WriteSize());
-    printf("Sending '%s'\n", mTxPacket.WriteBytes());
+    //LOG("Sending '%s'\n", mTxPacket.WriteBytes());
     mTxPacket.FillHeaderAndTrailer(len);
 
     mPort.Write(mTxPacket.Bytes(), mTxPacket.Length());

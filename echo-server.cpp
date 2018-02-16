@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "Log.h"
 #include "Packet.h"
 #include "ServerSocketPort.h"
 #include "StaticBuffer.h"
@@ -31,7 +32,7 @@ int main(int argc, char **argv)
       while (true) {
         int byte = client.ReadByte();
         if (packet.ProcessByte(byte)) {
-            printf("Got packet: '%s'\n", rxBuffer.Bytes());
+            LOG("Got packet: '%s'\n", rxBuffer.Bytes());
         }
         if (byte >= 0) {
           uint8_t buf = byte;

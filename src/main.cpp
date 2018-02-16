@@ -1,25 +1,14 @@
-/*
- * example.cpp
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-#include <stdio.h>
-#include <ArduinoJson.h>
+#include <Arduino.h>
 
 #include "Adapter.h"
 #include "Log.h"
 #include "Manager.h"
 #include "Packet.h"
 #include "Property.h"
-#include "ServerSocketPort.h"
+#include "SerialPort.h"
 #include "StaticArray.h"
 #include "StaticBuffer.h"
 #include "Thing.h"
-
-//---------------------------------------------------------------------
 
 bool ledValue = false;
 
@@ -32,6 +21,7 @@ JsonVariant ledGetter(const Property &property) {
 void ledSetter(const Property &property, const JsonVariant &val) {
   ledValue = val.as<bool>();
   LOG("ledSetter setting %s to %s\n", property.Name(), ledValue ? "on" : "off");
+  digitalWrite(LED_BUILTIN, ledValue & 1);
 }
 
 BooleanProperty on("on", ledGetter, ledSetter);
@@ -52,7 +42,7 @@ Adapter ledAdapter(ADAPTER_ID,
                    "Arduino-LED",
                     &ledThing, 1);
 
-ServerSocketPort port;
+SerialPort port;
 StaticBuffer<256> rxPacketBuffer;
 StaticBuffer<256> txPacketBuffer;
 
@@ -60,15 +50,35 @@ Manager<512> manager(port,
                      rxPacketBuffer, txPacketBuffer,
                      ledAdapter);
 
-int main(int argc, char **argv) {
+bool connected = false;
+int tick = 0;
+unsigned long lastTick = 0;
 
-  while (true) {
-    if (!port.Connect()) {
-      exit(1);
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  if (!Serial) {
+    // Nobody is connected to the serial port. Blink a little heartbeat
+    if (connected) {
+      tick = 0;
+      lastTick = 0;
+      connected = false;
     }
-    while (manager.Process()) {
-      ;
+    unsigned long now = millis();
+    if (now - lastTick >= 100) {
+      lastTick = now;
+      tick = (tick + 1) % 10;
+      if (tick <= 4) {
+        digitalWrite(LED_BUILTIN, tick & 1);
+      }
     }
+  } else {
+    if (!connected) {
+      on.Set(false);
+      connected = true;
+    }
+    manager.Process();
   }
-  return 0;
 }

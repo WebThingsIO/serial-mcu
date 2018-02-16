@@ -14,6 +14,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+#include "Log.h"
+
 #define PORT  7788
 
 ClientSocketPort::ClientSocketPort()
@@ -28,20 +30,22 @@ ClientSocketPort::ClientSocketPort()
 bool ClientSocketPort::Connect() {
   int client = socket(AF_INET, SOCK_STREAM, 0);
   if (client < 0) {
-    fprintf(stderr, "Unable to open socket: %s\n", strerror(errno));
+    LOG("Unable to open socket: %s\n", strerror(errno));
     return false;
   }
   SetSocket(client);
   if (connect(client, (struct sockaddr *)&mServerAddr, sizeof(mServerAddr)) < 0) {
-    fprintf(stderr, "connect failed: %s\n", strerror(errno));
+    LOG("connect failed: %s\n", strerror(errno));
     Close();
     return false;
   }
 
+  #if USE_LOG
   char addrBuf[INET_ADDRSTRLEN];
-  printf("Connection to %s:%d\n",
-          inet_ntop(AF_INET, &mServerAddr.sin_addr.s_addr,
-                    addrBuf, sizeof(addrBuf)),
-          ntohs(mServerAddr.sin_port));
+  LOG("Connection to %s:%d\n",
+      inet_ntop(AF_INET, &mServerAddr.sin_addr.s_addr,
+                addrBuf, sizeof(addrBuf)),
+      ntohs(mServerAddr.sin_port));
+  #endif
   return true;
 }

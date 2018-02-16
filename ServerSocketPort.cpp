@@ -14,6 +14,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
+#include "Log.h"
+
 #define PORT 7788
 
 ServerSocketPort::ServerSocketPort()
@@ -31,29 +33,29 @@ bool ServerSocketPort::Bind()
   mServer = socket(AF_INET, SOCK_STREAM, 0);
   if (mServer < 0)
   {
-    fprintf(stderr, "Unable to open socket: %s\n", strerror(errno));
+    LOG("Unable to open socket: %s\n", strerror(errno));
     return false;
   }
 
   int reuseAddr = 1;
   if (setsockopt(mServer, SOL_SOCKET, SO_REUSEADDR,
                  &reuseAddr, sizeof(reuseAddr)) < 0) {
-    fprintf(stderr, "SO_REUSEADDR failed: %s\n", strerror(errno));
+    LOG("SO_REUSEADDR failed: %s\n", strerror(errno));
     return false;
   }
   #if defined(SO_REUSEPORT)
   int reusePort = 1;
   if (setsockopt(mServer, SOL_SOCKET, SO_REUSEPORT,
                  &reusePort, sizeof(reusePort)) < 0) {
-    fprintf(stderr, "SO_REUSEPORT failed: %s\n", strerror(errno));
+    LOG("SO_REUSEPORT failed: %s\n", strerror(errno));
     return false;
   }
   #endif
 
   if (bind(mServer, (struct sockaddr *)&mServerAddr, sizeof(mServerAddr)) < 0) {
-    fprintf(stderr, "bind failed: %s\n", strerror(errno));
+    LOG("bind failed: %s\n", strerror(errno));
     return false;
-  }  
+  }
 
   return true;
 }
@@ -65,9 +67,9 @@ bool ServerSocketPort::Connect() {
     }
   }
 
-  printf("Waiting for client to connect...\n");
+  LOG("Waiting for client to connect...\n");
   if (listen(mServer, 1) < 0) {
-    fprintf(stderr, "listen failed: %s\n", strerror(errno));
+    LOG("listen failed: %s\n", strerror(errno));
     return false;
   }
 
@@ -76,15 +78,17 @@ bool ServerSocketPort::Connect() {
   memset(&mClientAddr, 0, sizeof(mClientAddr));
   int client = accept(mServer, (struct sockaddr *)&mClientAddr, &clientAddrLen);
   if (client < 0) {
-    fprintf(stderr, "accept failed: %s\n", strerror(errno));
+    LOG("accept failed: %s\n", strerror(errno));
     return false;
   }
   SetSocket(client);
 
+  #if USE_LOG
   char addrBuf[INET_ADDRSTRLEN];
-  printf("Connection from %s:%d\n",
-          inet_ntop(AF_INET, &mClientAddr.sin_addr.s_addr,
-                    addrBuf, sizeof(addrBuf)),
-          ntohs(mClientAddr.sin_port));
+  LOG("Connection from %s:%d\n",
+      inet_ntop(AF_INET, &mClientAddr.sin_addr.s_addr,
+                addrBuf, sizeof(addrBuf)),
+      ntohs(mClientAddr.sin_port));
+  #endif
   return true;
 }
